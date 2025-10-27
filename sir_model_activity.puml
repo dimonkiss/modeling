@@ -1,0 +1,115 @@
+@startuml SIR_Model_Activity_Diagram
+!theme plain
+title SIR Model - Activity Diagram
+
+start
+
+:Initialize Parameters;
+note right
+  N = 1000 (population)
+  I0 = 1 (initial infected)
+  R0 = 0 (initial recovered)
+  S0 = N - I0 - R0
+  β ∈ [0.1, 0.2, 0.3, 0.5, 0.8]
+  γ = 0.1 (recovery rate)
+  dt = 0.1 (time step)
+  t_max = 160 (duration)
+end note
+
+:Create Time Array;
+note right: t = np.arange(0, t_max, dt)
+
+:Initialize State Arrays;
+note right
+  S = np.zeros(len(t))
+  I = np.zeros(len(t))
+  R = np.zeros(len(t))
+end note
+
+:Set Initial Conditions;
+note right
+  S[0] = S0
+  I[0] = I0
+  R[0] = R0
+end note
+
+:Initialize Loop Counter;
+note right: i = 1
+
+while (i < len(t)?) is (Yes)
+  :Get Current Values;
+  note right
+    s = S[i-1]
+    i_val = I[i-1]
+    r = R[i-1]
+  end note
+  
+  :Calculate Derivatives;
+  note right
+    dS/dt = -β·s·i_val/N
+    dI/dt = β·s·i_val/N - γ·i_val
+    dR/dt = γ·i_val
+  end note
+  
+  partition "Runge-Kutta 4th Order Method" {
+    :Calculate k1 coefficients;
+    note right
+      k1_S = dSdt(s, i_val)
+      k1_I = dIdt(s, i_val, r)
+      k1_R = dRdt(i_val)
+    end note
+    
+    :Calculate k2 coefficients;
+    note right
+      k2_S = dSdt(s + 0.5·k1_S·dt, i_val + 0.5·k1_I·dt)
+      k2_I = dIdt(s + 0.5·k1_S·dt, i_val + 0.5·k1_I·dt, r + 0.5·k1_R·dt)
+      k2_R = dRdt(i_val + 0.5·k1_I·dt)
+    end note
+    
+    :Calculate k3 coefficients;
+    note right
+      k3_S = dSdt(s + 0.5·k2_S·dt, i_val + 0.5·k2_I·dt)
+      k3_I = dIdt(s + 0.5·k2_S·dt, i_val + 0.5·k2_I·dt, r + 0.5·k2_R·dt)
+      k3_R = dRdt(i_val + 0.5·k2_I·dt)
+    end note
+    
+    :Calculate k4 coefficients;
+    note right
+      k4_S = dSdt(s + k3_S·dt, i_val + k3_I·dt)
+      k4_I = dIdt(s + k3_S·dt, i_val + k3_I·dt, r + k3_R·dt)
+      k4_R = dRdt(i_val + k3_I·dt)
+    end note
+  }
+  
+  :Update State Variables;
+  note right
+    S[i] = s + (dt/6)·(k1_S + 2·k2_S + 2·k3_S + k4_S)
+    I[i] = i_val + (dt/6)·(k1_I + 2·k2_I + 2·k3_I + k4_I)
+    R[i] = r + (dt/6)·(k1_R + 2·k2_R + 2·k3_R + k4_R)
+  end note
+  
+  :Increment Counter;
+  note right: i = i + 1
+endwhile (No)
+
+:Calculate Statistics;
+note right
+  Imax = max(I)
+  t_peak = t[argmax(I)]
+  R_final = R[-1]
+  R0 = β·S0/γ
+end note
+
+partition "Visualization" {
+  :Plot I(t) vs Time for Different β;
+  
+  :Plot I(t) vs Time for Different γ;
+  
+  :Create Bar Chart of Peak Values;
+  
+  :Generate Summary Table;
+}
+
+stop
+
+@enduml
